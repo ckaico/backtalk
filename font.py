@@ -103,17 +103,38 @@ SMALL = {
 
 
 def render(text, font="tall", row=0, spacing=1):
-    """7-row grid for text. font='small' is 5 rows tall, shifted down by `row` (0-2)."""
+    """7-row grid for text. 'small' is 5 rows tall, 'mini' is 4; `row` shifts them down."""
     if font == "tall":
         return render_text(text, spacing)
-    if not 0 <= row <= 2:
-        raise ValueError("--row must be 0, 1 or 2 for the small font")
+    table = {"small": SMALL, "mini": MINI}[font]
+    h = len(table["A"])
+    if not 0 <= row <= 7 - h:
+        raise ValueError(f"--row must be 0 to {7 - h} for the {font} font")
     chars = list(text.upper())
-    body = [""] * 5
+    body = [""] * h
     for i, ch in enumerate(chars):
-        if ch not in SMALL:
-            raise ValueError(f"No small glyph for {ch!r}")
-        for r in range(5):
-            body[r] += SMALL[ch][r] + ("." * spacing if i < len(chars) - 1 else "")
+        if ch not in table:
+            raise ValueError(f"No {font} glyph for {ch!r}")
+        for r in range(h):
+            body[r] += table[ch][r] + ("." * spacing if i < len(chars) - 1 else "")
     w = len(body[0])
-    return ["." * w] * row + body + ["." * w] * (2 - row)
+    return ["." * w] * row + body + ["." * w] * (7 - h - row)
+
+
+# Mini 3x4 font: smallest that stays readable (3x3 loses B/R/K/M/N/W). Leaves 3 spare rows.
+MINI = {
+    "A": [".#.", "#.#", "###", "#.#"], "B": ["##.", "###", "#.#", "##."], "C": ["###", "#..", "#..", "###"],
+    "D": ["##.", "#.#", "#.#", "##."], "E": ["###", "##.", "#..", "###"], "F": ["###", "#..", "##.", "#.."],
+    "G": ["##.", "#..", "#.#", "###"], "H": ["#.#", "###", "#.#", "#.#"], "I": ["###", ".#.", ".#.", "###"],
+    "J": ["..#", "..#", "#.#", ".#."], "K": ["#.#", "##.", "#.#", "#.#"], "L": ["#..", "#..", "#..", "###"],
+    "M": ["#.#", "###", "###", "#.#"], "N": ["##.", "#.#", "#.#", "#.#"], "O": ["###", "#.#", "#.#", "###"],
+    "P": ["###", "#.#", "###", "#.."], "Q": [".#.", "#.#", "##.", ".##"], "R": ["##.", "#.#", "##.", "#.#"],
+    "S": [".##", "#..", "..#", "##."], "T": ["###", ".#.", ".#.", ".#."], "U": ["#.#", "#.#", "#.#", "###"],
+    "V": ["#.#", "#.#", "#.#", ".#."], "W": ["#.#", "#.#", "###", "###"], "X": ["#.#", ".#.", ".#.", "#.#"],
+    "Y": ["#.#", "#.#", ".#.", ".#."], "Z": ["###", "..#", "#..", "###"],
+    "0": ["###", "#.#", "#.#", "###"], "1": [".#.", "##.", ".#.", "###"], "2": ["##.", "..#", ".#.", "###"],
+    "3": ["###", ".##", "..#", "###"], "4": ["#.#", "###", "..#", "..#"], "5": ["###", "##.", "..#", "##."],
+    "6": ["#..", "###", "#.#", "###"], "7": ["###", "..#", ".#.", ".#."], "8": [".#.", "###", "#.#", "###"],
+    "9": ["###", "#.#", "###", "..#"], "!": ["#", "#", ".", "#"], "?": ["##.", "..#", "...", ".#."],
+    "'": ["#", "#", ".", "."], ".": [".", ".", ".", "#"], "-": ["...", "###", "...", "..."], " ": ["..", "..", "..", ".."],
+}

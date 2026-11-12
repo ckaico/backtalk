@@ -25,7 +25,7 @@ open out/preview.html
 ```
 
 The preview is your actual graph with the art on top. Drag it, nudge it with the arrow keys, draw
-with four shades, or switch to the small font to move it up and down. It gives you the exact
+with four shades, or switch to a smaller font to move it up and down. It gives you the exact
 command for what you see. When it looks right:
 
 ```bash
@@ -37,8 +37,9 @@ cd - && python3 backtalk.py verify out/manifest.json YOUR_LOGIN
 
 ## How it works
 
-The graph is one column per week, Sunday on top. Letters are 7 squares tall, or 5 with
-`--font small`.
+The graph is one column per week, Sunday on top. Letters are 7 squares tall, 5 with
+`--font small`, or 4 with `--font mini`, the smallest that still reads. The smaller fonts leave
+room to move the word up or down with `--row`.
 
 `plan` reads your graph and picks the widest stretch of past weeks with nothing in it, so the art
 never lands on your real work. Pass `--start` with a Sunday to place it yourself.

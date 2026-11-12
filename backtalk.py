@@ -17,7 +17,7 @@ import os
 import subprocess
 import sys
 
-from font import GLYPHS, SMALL, compose, render, render_text
+from font import GLYPHS, MINI, SMALL, compose, render, render_text
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MARK = "backtalk-cell"
@@ -184,7 +184,7 @@ def visualizer_data(m, counts, first, ncols, col, site=False):
             "font": m.get("font", "tall"), "row": m.get("row", 0), "perCell": m["per_cell"],
             "startCol": col, "first": first.isoformat(), "ncols": ncols,
             "today": dt.date.today().isoformat(), "counts": {d: v for d, v in counts.items() if v},
-            "tall": GLYPHS, "small": SMALL}
+            "tall": GLYPHS, "small": SMALL, "mini": MINI}
 
 
 def write_visualizer(m, counts, first, ncols, path, col, site=False):
@@ -342,7 +342,7 @@ def main():
     pl = s.add_parser("plan"); pl.add_argument("text"); pl.add_argument("--calendar", required=True)
     pl.add_argument("--email", required=True); pl.add_argument("--start"); pl.add_argument("--per-cell", type=int)
     pl.add_argument("--spacing", type=int, default=1); pl.add_argument("--margin", type=int, default=2)
-    pl.add_argument("--out", default="out"); pl.add_argument("--icon"); pl.add_argument("--pattern", help="7 rows of .1234 joined by /, from the visualizer"); pl.add_argument("--font", choices=["tall", "small"], default="tall"); pl.add_argument("--row", type=int, default=0); pl.add_argument("--gap", type=int, default=2)
+    pl.add_argument("--out", default="out"); pl.add_argument("--icon"); pl.add_argument("--pattern", help="7 rows of .1234 joined by /, from the visualizer"); pl.add_argument("--font", choices=["tall", "small", "mini"], default="tall"); pl.add_argument("--row", type=int, default=0); pl.add_argument("--gap", type=int, default=2)
     pa = s.add_parser("paint"); pa.add_argument("manifest"); pa.add_argument("--repo", required=True)
     pa.add_argument("--name", required=True)
     st = s.add_parser("site"); st.add_argument("--out", default="site")

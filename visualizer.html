@@ -36,7 +36,7 @@ a{color:#58a6ff}
 
 <div class="bar">
   <input type="text" id="word" maxlength="12" aria-label="Word">
-  <select id="font" aria-label="Font"><option value="tall">Tall</option><option value="small">Small</option></select>
+  <select id="font" aria-label="Font"><option value="tall">Tall</option><option value="small">Small</option><option value="mini">Mini</option></select>
   <span class="sep"></span>
   <button data-tool="move" class="on">Move</button><button data-tool="pen">Pen</button><button data-tool="erase">Erase</button>
   <span class="sw-wrap" id="sws"></span>
@@ -62,7 +62,7 @@ let textPx=new Map(), drawPx=new Map(); // key "c,r" relative to origin -> brigh
 const $=id=>document.getElementById(id), g=$("g");
 $("word").value=word; $("font").value=font;
 
-function stamp(){textPx=new Map();const F=font==="small"?D.small:D.tall;let x=0;
+function stamp(){textPx=new Map();const F=D[font]||D.tall;let x=0;
   [...word.toUpperCase()].forEach((ch,i,a)=>{const gl=F[ch];if(!gl)return;
     gl.forEach((row,r)=>[...row].forEach((v,c)=>{if(v==="#")textPx.set((x+c)+","+r,4)}));x+=gl[0].length+1});}
 function art(){const m=new Map(textPx);drawPx.forEach((v,k)=>v?m.set(k,v):m.delete(k));
