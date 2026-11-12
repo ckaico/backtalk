@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://backtalk.ckai.co/sitemap.xml

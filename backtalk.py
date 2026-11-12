@@ -292,14 +292,46 @@ def site(args):
     os.makedirs(args.out, exist_ok=True)
     path = os.path.join(args.out, "index.html")
     write_visualizer(m, {}, first, ncols, path, (ncols - width) // 2, site=True)
-    meta = ('<link rel="canonical" href="https://backtalk.ckai.co/">\n'
-            '<meta property="og:title" content="Backtalk">\n'
-            '<meta property="og:description" content="Make your GitHub history say something.">\n'
-            '<meta property="og:url" content="https://backtalk.ckai.co/">\n'
-            '<meta property="og:image" content="https://backtalk.ckai.co/og.png">\n'
-            '<meta name="twitter:card" content="summary_large_image">\n</head>')
+    title = "Backtalk: write words on your GitHub contribution graph"
+    desc = ("Type a word or draw pixel art, preview it on your real GitHub contribution graph, "
+            "then paint it in with backdated commits in a separate repo. Free and open source.")
+    site_url, img = "https://backtalk.ckai.co/", "https://backtalk-eta.vercel.app/og.png"
+    icon = ("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E"
+            "%3Crect width='16' height='16' rx='3' fill='%230d1117'/%3E"
+            "%3Crect x='3' y='3' width='4' height='4' rx='1' fill='%2339d353'/%3E"
+            "%3Crect x='9' y='3' width='4' height='4' rx='1' fill='%23006d32'/%3E"
+            "%3Crect x='3' y='9' width='4' height='4' rx='1' fill='%2326a641'/%3E"
+            "%3Crect x='9' y='9' width='4' height='4' rx='1' fill='%2339d353'/%3E%3C/svg%3E")
+    ld = json.dumps({"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Backtalk",
+                     "description": desc, "url": site_url, "applicationCategory": "DeveloperApplication",
+                     "operatingSystem": "macOS, Linux, Windows", "offers": {"@type": "Offer", "price": "0"},
+                     "author": {"@type": "Person", "name": "Christian Kai", "url": "https://github.com/ckaico"},
+                     "codeRepository": "https://github.com/ckaico/backtalk"})
+    meta = (f'<link rel="canonical" href="{site_url}">\n'
+            f'<link rel="icon" href="{icon}">\n'
+            '<meta name="theme-color" content="#0d1117">\n'
+            '<meta property="og:type" content="website">\n'
+            '<meta property="og:site_name" content="Backtalk">\n'
+            f'<meta property="og:title" content="{title}">\n'
+            f'<meta property="og:description" content="{desc}">\n'
+            f'<meta property="og:url" content="{site_url}">\n'
+            f'<meta property="og:image" content="{img}">\n'
+            '<meta property="og:image:width" content="1200">\n'
+            '<meta property="og:image:height" content="630">\n'
+            '<meta property="og:image:alt" content="A GitHub contribution graph with the word POOP spelled out in green squares">\n'
+            '<meta name="twitter:card" content="summary_large_image">\n'
+            f'<meta name="twitter:title" content="{title}">\n'
+            f'<meta name="twitter:description" content="{desc}">\n'
+            f'<meta name="twitter:image" content="{img}">\n'
+            f'<script type="application/ld+json">{ld}</script>\n</head>')
     html = open(path).read().replace("</head>", meta, 1)
+    html = html.replace("<title>Backtalk</title>", f"<title>{title}</title>", 1)
+    html = html.replace('content="Make your GitHub contribution graph say something."', f'content="{desc}"', 1)
     open(path, "w").write(html)
+    open(os.path.join(args.out, "robots.txt"), "w").write(f"User-agent: *\nAllow: /\nSitemap: {site_url}sitemap.xml\n")
+    open(os.path.join(args.out, "sitemap.xml"), "w").write(
+        '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"<url><loc>{site_url}</loc><lastmod>{dt.date.today()}</lastmod></url></urlset>\n")
     print("site:", os.path.join(args.out, "index.html"))
 
 
