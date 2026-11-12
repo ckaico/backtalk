@@ -1,0 +1,66 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Backtalk demo</title>
+<style>
+:root{--bg:#0d1117;--fg:#e6edf3;--mut:#8b949e;--line:#30363d;--l0:#161b22;--l1:#0e4429;--l2:#006d32;--l3:#26a641;--l4:#39d353}
+*{box-sizing:border-box}
+html,body{margin:0;width:880px;height:420px;overflow:hidden;background:#010409;color:var(--fg);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.win{position:absolute;inset:18px;border:1px solid var(--line);border-radius:10px;background:var(--bg);overflow:hidden}
+.top{height:34px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:7px;padding:0 12px;background:#161b22}
+.dot{width:11px;height:11px;border-radius:50%;background:#3d444d}
+.url{margin-left:14px;background:#0d1117;border:1px solid var(--line);border-radius:6px;padding:2px 12px;color:var(--mut);font-size:12.5px;min-width:260px}
+.body{padding:22px 28px}
+h1{font-size:22px;margin:0}.tag{color:var(--mut);margin:2px 0 16px}
+.bar{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.in{background:var(--l0);border:1px solid var(--line);border-radius:6px;padding:5px 10px;width:150px;letter-spacing:.1em;font-weight:600;height:32px}
+.caret{display:inline-block;width:1.5px;height:16px;background:var(--fg);vertical-align:-3px;margin-left:1px}
+.btn{background:#21262d;border:1px solid var(--line);border-radius:6px;padding:5px 11px;font-size:13px}
+.btn.go{background:#238636;border-color:#2ea043}
+.card{border:1px solid var(--line);border-radius:6px;padding:14px;position:relative}
+.g{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,11px);gap:3px;width:max-content}
+.c{width:11px;height:11px;border-radius:2px;background:var(--l0)}
+.c.x{background:transparent}
+.status{color:var(--mut);font-size:12.5px;margin-top:10px}.status b{color:var(--fg)}
+.cursor{position:absolute;width:18px;height:18px;pointer-events:none}
+.term{font:13px/1.55 ui-monospace,Menlo,monospace;padding:14px 20px;height:170px;overflow:hidden;border-bottom:1px solid var(--line);background:#010409}
+.term .p{color:#7ee787}.term .m{color:var(--mut)}
+.prof{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.av{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#26a641,#0e4429)}
+.big{font-size:15px;margin:0 0 8px}
+.cap{position:absolute;left:0;right:0;bottom:20px;text-align:center;font-size:15px;color:var(--mut)}
+.cap b{color:var(--fg)}
+</style></head><body><div id="root"></div>
+<script>
+const D=__DATA__;
+const f=+(new URLSearchParams(location.search).get("f")||0);
+const S=D.frames[f];
+const L=["var(--l0)","var(--l1)","var(--l2)","var(--l3)","var(--l4)"];
+const DAY=864e5, first=new Date(D.first+"T00:00:00Z"), iso=d=>d.toISOString().slice(0,10);
+const dateOf=(c,r)=>iso(new Date(first.getTime()+(c*7+r)*DAY));
+function glyphs(t){const m=new Map();let x=0;[...t].forEach(ch=>{const g=D.tall[ch];g.forEach((row,r)=>[...row].forEach((v,c)=>{if(v==="#")m.set((x+c)+","+r,1)}));x+=g[0].length+1});return m}
+function levels(after){const nz=Object.values(after).filter(Boolean).sort((a,b)=>a-b);if(!nz.length)return()=>0;
+  const q=p=>nz[Math.min(nz.length-1,Math.floor(p*nz.length))],q1=q(.25),q2=q(.5),q3=q(.75);return v=>!v?0:v<q1?1:v<q2?2:v<q3?3:4}
+// grid: art = Map "c,r" absolute; fillCols = only art columns < this get commits (for painting), preview=true draws art at full shade
+function grid(art,opts={}){const after={...D.counts};
+  art.forEach((v,k)=>{const[c,r]=k.split(",").map(Number);if(opts.fill!==undefined&&c>=opts.fill)return;after[dateOf(c,r)]=(after[dateOf(c,r)]||0)+D.perCell});
+  const lv=levels(after);let h="";
+  for(let c=0;c<D.ncols;c++)for(let r=0;r<7;r++){const d=dateOf(c,r);if(d>D.today){h+='<div class="c x"></div>';continue}
+    let l=lv(after[d]||0);if(opts.preview&&art.has(c+","+r))l=4;h+=`<div class="c" style="background:${L[l]}"></div>`}
+  return `<div class="g">${h}</div>`}
+const shift=(m,dx)=>{const o=new Map();m.forEach((v,k)=>{const[c,r]=k.split(",").map(Number);o.set((c+dx)+","+r,v)});return o};
+const browser=(url,inner)=>`<div class="win"><div class="top"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">${url}</span></div>${inner}</div>`;
+const cursorSvg=`<svg class="cursor" viewBox="0 0 18 18"><path d="M2 1l13 7-6 1.5L6 16z" fill="#fff" stroke="#000" stroke-width="1"/></svg>`;
+let html="";
+if(S.s==="edit"){const art=shift(glyphs(S.text),S.col);
+  const status=S.text?`<b>${dateOf(S.col,0)}</b> → <b>${dateOf(S.col+22,6)}</b> · ${art.size} pixels · ${(art.size*D.perCell).toLocaleString()} commits · ${S.col===D.col?"no overlap with your real work":"drag to place"}`:"Type a word, or pick Pen and draw";
+  html=browser("backtalk.ckai.co",`<div class="body"><h1>Backtalk</h1><div class="tag">Make your GitHub history say something.</div>
+   <div class="bar"><div class="in">${S.text}${S.caret?'<span class="caret"></span>':""}</div><span class="btn ${S.paint?"":"go"}">Move</span><span class="btn">Pen</span><span class="btn">Erase</span><span class="btn">Center</span>${S.paint?'<span class="btn go">Copy command</span>':""}</div>
+   <div class="card" id="card">${grid(art,{preview:true})}<div class="status">${status}</div>${S.cursor!==undefined?`<div style="position:absolute;left:${14+S.cursor*14+18}px;top:${14+3*14+4}px">${cursorSvg}</div>`:""}</div></div>`)}
+if(S.s==="paint"){const art=shift(glyphs("POOP"),D.col);
+  const lines=S.lines.map(l=>l[0]==="$"?`<div><span class="p">$</span> ${l.slice(2)}</div>`:`<div class="m">${l}</div>`).join("");
+  html=browser("~/poop",`<div class="term">${lines}</div><div class="body" style="padding-top:16px">${grid(art,{fill:S.fill})}<div class="status">${S.note}</div></div>`)}
+if(S.s==="done"){const art=shift(glyphs("POOP"),D.col);
+  html=browser("github.com/ckaico",`<div class="body" style="padding-top:22px"><div class="prof"><div class="av"></div><div><b>Christian Kai</b><div class="tag" style="margin:0">ckaico</div></div></div>
+   <p class="big">${D.total.toLocaleString()} contributions in the last year</p><div class="card">${grid(art)}</div></div>
+   <div class="cap">${S.cap}</div>`)}
+document.getElementById("root").innerHTML=html;
+</script></body></html>

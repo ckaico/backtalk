@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Backtalk</title>
+<meta name="description" content="Make your GitHub contribution graph say something.">
+<style>
+:root{--bg:#0d1117;--fg:#e6edf3;--mut:#8b949e;--line:#30363d;--btn:#21262d;--l0:#161b22;--l1:#0e4429;--l2:#006d32;--l3:#26a641;--l4:#39d353;--bad:#f85149;--warn:#d29922}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:40px 16px}
+.wrap{max-width:860px;margin:0 auto}
+h1{font-size:28px;margin:0;letter-spacing:-.02em}
+.tag{color:var(--mut);margin:4px 0 28px;font-size:17px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+input[type=text]{background:var(--l0);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font:inherit;width:150px;text-transform:uppercase;letter-spacing:.08em}
+button,select{background:var(--btn);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 11px;cursor:pointer;font:inherit;font-size:14px}
+button.on{background:#238636;border-color:#2ea043}
+.sw{width:22px;height:22px;padding:0;border-radius:4px}
+.sw.on{outline:2px solid var(--fg);outline-offset:1px;background-clip:padding-box}
+.sep{width:1px;height:24px;background:var(--line);margin:0 4px}
+.card{border:1px solid var(--line);border-radius:6px;padding:16px;overflow-x:auto;user-select:none;-webkit-user-select:none;touch-action:none}
+.g{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,11px);gap:3px;width:max-content}
+.c{width:11px;height:11px;border-radius:2px;background:var(--l0)}
+.c.x{background:transparent}
+.c.clash{box-shadow:0 0 0 1px var(--warn) inset}
+.c.off{box-shadow:0 0 0 1px var(--bad) inset}
+.g.move{cursor:grab}.g.pen,.g.erase{cursor:crosshair}
+.status{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--mut);font-size:13px;margin-top:10px}
+.status b{color:var(--fg);font-weight:600}.status .w{color:var(--warn)}.status .e{color:var(--bad)}
+pre{background:var(--l0);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font:12.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all;margin:8px 0 0}
+h2{font-size:15px;margin:28px 0 4px}
+p.small{color:var(--mut);font-size:13px;margin:6px 0}
+a{color:#58a6ff}
+.hint{color:var(--mut);font-size:13px}
+</style></head><body><div class="wrap">
+<h1>Backtalk</h1>
+<p class="tag">Make your GitHub history say something.</p>
+
+<div class="bar">
+  <input type="text" id="word" maxlength="12" aria-label="Word">
+  <select id="font" aria-label="Font"><option value="tall">Tall</option><option value="small">Small</option></select>
+  <span class="sep"></span>
+  <button data-tool="move" class="on">Move</button><button data-tool="pen">Pen</button><button data-tool="erase">Erase</button>
+  <span class="sw-wrap" id="sws"></span>
+  <span class="sep"></span>
+  <button id="left" aria-label="Left">←</button><button id="right" aria-label="Right">→</button><button id="up" aria-label="Up">↑</button><button id="down" aria-label="Down">↓</button><button id="center">Center</button><button id="clear">Clear drawing</button>
+</div>
+
+<div class="card"><div class="g move" id="g"></div>
+<div class="status" id="status"></div></div>
+<p class="hint">Drag to move it, or use the arrow keys. Pick Pen and a shade to draw. GitHub picks the final colors, so shades here are a guess.</p>
+
+<div id="cli"></div>
+
+<h2>What it does to your account</h2>
+<p class="small">It adds commits to one new repo, dated in the past on purpose, and that repo's README says so. Your other repos are left alone. <a href="https://github.com/ckaico/backtalk">Source</a></p>
+</div>
+<script>
+const D=__DATA__;
+const DAY=864e5, iso=d=>d.toISOString().slice(0,10), first=new Date(D.first+"T00:00:00Z"), today=D.today;
+const L=["var(--l0)","var(--l1)","var(--l2)","var(--l3)","var(--l4)"];
+let tool="move", brush=4, font=D.font||"tall", word=D.text, ox=D.startCol, oy=D.row||0;
+let textPx=new Map(), drawPx=new Map(); // key "c,r" relative to origin -> brightness 0..4 (draw 0 = erased)
+const $=id=>document.getElementById(id), g=$("g");
+$("word").value=word; $("font").value=font;
+
+function stamp(){textPx=new Map();const F=font==="small"?D.small:D.tall;let x=0;
+  [...word.toUpperCase()].forEach((ch,i,a)=>{const gl=F[ch];if(!gl)return;
+    gl.forEach((row,r)=>[...row].forEach((v,c)=>{if(v==="#")textPx.set((x+c)+","+r,4)}));x+=gl[0].length+1});}
+function art(){const m=new Map(textPx);drawPx.forEach((v,k)=>v?m.set(k,v):m.delete(k));
+  const abs=new Map();m.forEach((v,k)=>{const[c,r]=k.split(",").map(Number);abs.set((c+ox)+","+(r+oy),v)});return abs}
+function bbox(m){let a=1e9,b=-1e9,t=1e9,u=-1e9;m.forEach((v,k)=>{const[c,r]=k.split(",").map(Number);a=Math.min(a,c);b=Math.max(b,c);t=Math.min(t,r);u=Math.max(u,r)});return{a,b,t,u}}
+const commits=b=>Math.max(1,Math.round(D.perCell*b/4));
+function levels(after){const nz=Object.values(after).filter(Boolean).sort((a,b)=>a-b);if(!nz.length)return()=>0;
+  const q=p=>nz[Math.min(nz.length-1,Math.floor(p*nz.length))],q1=q(.25),q2=q(.5),q3=q(.75);
+  return v=>!v?0:v<q1?1:v<q2?2:v<q3?3:4}
+const dateOf=(c,r)=>iso(new Date(first.getTime()+(c*7+r)*DAY));
+
+function draw(){const A=art(),after={...D.counts};let off=0,clash=0,total=0;
+  A.forEach((v,k)=>{const[c,r]=k.split(",").map(Number);if(c<0||c>=D.ncols||r<0||r>6||dateOf(c,r)>=today){off++;return}
+    const d=dateOf(c,r);after[d]=(after[d]||0)+commits(v);total+=commits(v)});
+  const lv=levels(after),bb=bbox(A);g.innerHTML="";
+  for(let c=0;c<D.ncols;c++)for(let r=0;r<7;r++){const e=document.createElement("div");e.className="c";e.dataset.c=c;e.dataset.r=r;
+    const d=dateOf(c,r);if(d>today){e.classList.add("x");g.appendChild(e);continue}
+    const v=after[d]||0;e.style.background=L[lv(v)];
+    const real=D.counts[d]||0,lit=A.has(c+","+r);
+    if(real&&!lit&&c>=bb.a&&c<=bb.b){e.classList.add("clash");clash++}
+    if(lit&&d>=today)e.classList.add("off");
+    e.title=`${v} contributions on ${d}${lit?" (art)":""}${real?` · ${real} real`:""}`;g.appendChild(e)}
+  const start=A.size?dateOf(bb.a,0):null,end=A.size?dateOf(bb.b,6):null;
+  $("status").innerHTML=A.size?[
+    `<span><b>${start}</b> → <b>${end}</b></span>`,`<span><b>${A.size}</b> pixels · <b>${total.toLocaleString()}</b> commits</span>`,
+    D.site?`<span>Sample graph. Your own loads when you run it.</span>`:`<span>@${D.user}</span>`,
+    D.site?"":clash?`<span class="w">${clash} real day${clash>1?"s":""} inside the art (kept, may blur the art)</span>`:`<span>No overlap with your real work</span>`,
+    off?`<span class="e">${off} pixel${off>1?"s":""} off the graph or in the future</span>`:""].join(""):"<span>Empty canvas</span>";
+  cli(A,bb,off)}
+
+function cli(A,bb,off){if(!A.size||off){$("cli").innerHTML="";return}
+  const rows=[];for(let r=0;r<7;r++){let s="";for(let c=bb.a;c<=bb.b;c++)s+=A.has(c+","+r)?A.get(c+","+r):".";rows.push(s)}
+  const onlyText=!drawPx.size,start=dateOf(bb.a,0);
+  const cmd=D.site?
+`git clone https://github.com/ckaico/backtalk && cd backtalk
+python3 backtalk.py fetch YOUR_GITHUB_LOGIN
+python3 backtalk.py plan "${word||"ART"}" --calendar calendar.json \\
+  --email YOUR_GITHUB_EMAIL \\
+  --pattern "${rows.join("/")}" --start ${start}
+open out/preview.html   # see it on your real graph and adjust
+python3 backtalk.py paint out/manifest.json --repo ../my-art --name "Your Name"`:
+`python3 backtalk.py plan "${word||"ART"}" --calendar calendar.json --email ${D.email} \\
+  --pattern "${rows.join("/")}" --start ${start} --per-cell ${D.perCell}`;
+  $("cli").innerHTML=`<h2>${D.site?"Make your own":"Command for this layout"}</h2><pre id="cmd"></pre><div class="bar" style="margin-top:8px"><button id="copy">Copy</button></div>`;
+  $("cmd").textContent=cmd;$("copy").onclick=()=>{navigator.clipboard.writeText(cmd);$("copy").textContent="Copied"}}
+
+function move(dx,dy){const A=art();if(!A.size){ox+=dx;draw();return}const bb=bbox(A);
+  if(bb.t+dy<0||bb.u+dy>6)dy=0;ox+=dx;oy+=dy;draw()}
+function center(){const A=art();if(!A.size)return;const bb=bbox(A),w=bb.b-bb.a+1,h=bb.u-bb.t+1;
+  const free=[];for(let c=0;c<D.ncols;c++){let ok=dateOf(c,6)<today;for(let r=0;r<7;r++)if(D.counts[dateOf(c,r)])ok=false;free.push(ok)}
+  let best=null;for(let c=0;c<D.ncols;){if(!free[c]){c++;continue}const s=c;while(c<D.ncols&&free[c])c++;if(c-s>=w&&(!best||c-s>best[1]))best=[s,c-s]}
+  if(!best){const end=D.ncols-2;best=[Math.max(0,end-w-(D.ncols-w)/2|0),w]}
+  ox+=best[0]+((best[1]-w)>>1)-bb.a;oy+=((7-h)>>1)-bb.t;draw()}
+
+let dragging=null;
+g.addEventListener("pointerdown",e=>{const t=e.target.closest(".c");if(!t||t.classList.contains("x"))return;g.setPointerCapture(e.pointerId);
+  dragging={c:+t.dataset.c,r:+t.dataset.r};if(tool!=="move")paint(t);});
+g.addEventListener("pointermove",e=>{if(!dragging)return;const t=document.elementFromPoint(e.clientX,e.clientY)?.closest(".c");if(!t||t.dataset.c===undefined)return;
+  const c=+t.dataset.c,r=+t.dataset.r;if(tool==="move"){const dx=c-dragging.c,dy=r-dragging.r;if(dx||dy){move(dx,dy);dragging={c,r}}}else paint(t)});
+g.addEventListener("pointerup",()=>dragging=null);g.addEventListener("pointercancel",()=>dragging=null);
+function paint(t){const k=(+t.dataset.c-ox)+","+(+t.dataset.r-oy),v=tool==="erase"?0:brush;if(drawPx.get(k)===v)return;
+  if(v===0&&!textPx.has(k))drawPx.delete(k);else drawPx.set(k,v);draw()}
+
+document.querySelectorAll("[data-tool]").forEach(b=>b.onclick=()=>{tool=b.dataset.tool;document.querySelectorAll("[data-tool]").forEach(x=>x.classList.toggle("on",x===b));g.className="g "+tool});
+[1,2,3,4].forEach(n=>{const b=document.createElement("button");b.className="sw"+(n===4?" on":"");b.style.background=L[n];b.title="Shade "+n;b.ariaLabel="Shade "+n;
+  b.onclick=()=>{brush=n;document.querySelectorAll(".sw").forEach(x=>x.classList.toggle("on",x===b));document.querySelector('[data-tool="pen"]').click()};$("sws").appendChild(b)});
+$("word").oninput=e=>{word=e.target.value;stamp();draw()};
+$("font").onchange=e=>{font=e.target.value;stamp();if(font==="tall")oy=0;draw()};
+$("left").onclick=()=>move(-1,0);$("right").onclick=()=>move(1,0);$("up").onclick=()=>move(0,-1);$("down").onclick=()=>move(0,1);
+$("center").onclick=center;$("clear").onclick=()=>{drawPx=new Map();draw()};
+document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;const m={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(m){e.preventDefault();move(...m)}});
+stamp();draw();
+</script></body></html>
